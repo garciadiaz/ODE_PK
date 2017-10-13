@@ -26,19 +26,19 @@
                color:#800000;">Two comparment simulation</h1>
     <div style="width:500px; font-size = 10px; margin-left:auto; margin-right:auto; position:relative";>
       <input type="range" id="kelSlider" min="0.01" max="10" step="0.01" value="1" oninput="showconstants();" onchange="showconstants();">
-      Elimination rate constant (kel) = <span id="kelReadout">1</span> s-1
+      Elimination rate constant (kel) = <span id="kelReadout">1</span> s<sup>-1</sup>
     </div>
     <div style="width:500px; font-size = 10px; margin-left:auto; margin-right:auto; position:relative";>
       <input type="range" id="kaSlider" min="0.01" max="10" step="0.01" value="1" oninput="showconstants();" onchange="showconstants();">
-      Absorption rate constant (ka) = <span id="kaReadout">1</span> s-1
+      Absorption rate constant (ka) = <span id="kaReadout">1</span> s<sup>-1</sup>
     </div>
     <div style="width:500px; font-size = 10px; margin-left:auto; margin-right:auto; position:relative";>
       <input type="range" id="kd1Slider" min="0.01" max="10" step="0.01" value="1" oninput="showconstants();" onchange="showconstants();">
-      Distribution rate constant (kd1) = <span id="kd1Readout">1</span> s-1
+      Distribution rate constant (kd1) = <span id="kd1Readout">1</span> s<sup>-1</sup>
     </div>
     <div style="width:500px; font-size = 10px; margin-left:auto; margin-right:auto; position:relative";>
       <input type="range" id="kd2Slider" min="0.01" max="10" step="0.01" value="1" oninput="showconstants();" onchange="showconstants();">
-      Distribution reverse rate constant (kd2) = <span id="kd2Readout">1</span> s-1
+      Distribution reverse rate constant (kd2) = <span id="kd2Readout">1</span> s<sup>-1</sup>
     </div>
     <div style="width:500px; font-size = 10px; margin-left:auto; margin-right:auto; position:relative";>
       <input type="range" id="VcSlider" min="1" max="8" step="0.5" value="5" oninput="showconstants();" onchange="showconstants();">
@@ -52,7 +52,8 @@
       <input type="button" value="Plot!" onclick="maketheplot();">
     </div>
     <p style="font-size:18px";> This is a simulation of a two comparment pharmacokinetic model.</p>
-    <div id="tester" style="width:600px;height:250px;"></div>
+    <div id="linear" style="width:600px;height:350px;"></div>
+    <div id="log" style="width:600px;height:350px;"></div>
     <script>
       var kel, ka, kd1, kd2, Vc, Vt;
 
@@ -127,11 +128,19 @@ function maketheplot() {
   Vc = Number(VcSlider.value);
   Vt = Number(VtSlider.value);
   var rkValues = RK4(100, 0, 0, step, iterations);
+
   var layout={
+    title: 'Cp over time - linear',
     xaxis: {title: 'time (s)'},
     yaxis: {title: 'Cp (mg/l)'}
   }
-  Plotly.newPlot('tester', [{x:times, y:arrayColumn(rkValues, 1)}], layout);
+  var layout2={
+    title: 'Cp over time - log',
+    xaxis: {title: 'time (s)'},
+    yaxis: {title: 'Cp (mg/l)', type: 'log'}
+  }
+  Plotly.newPlot('linear', [{x:times, y:arrayColumn(rkValues, 1)}], layout);
+  Plotly.newPlot('log', [{x:times, y:arrayColumn(rkValues, 1)}], layout2);
 }
 function showconstants() {
         kelReadout.innerHTML = kelSlider.value;
