@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=640">
+    <script src="plotly-latest.min.js"></script>
+    <script src="underscore.js"></script>
+    <style>
+      input {
+            -webkit-user-select: none;
+            -moz-user-select: -moz-none;
+            -ms-user-select: none;
+            user-select: none;
+            }
+    </style>
+    <title>PK simulation</title>
+  </head>
+  <body style="font-family:sans-serif;
+               font-size:11px;
+               width:600px;
+               margin-left:auto;
+               margin-right:auto;
+               background-color:#c0c0c0;">
+    <h1 style="font-size:24px;
+               text-align:center;
+               color:#800000;">Two comparment simulation</h1>
+    <div style="width:500px; font-size = 10px; margin-left:auto; margin-right:auto; position:relative";>
+      <input type="range" id="kelSlider" min="0.01" max="10" step="0.01" value="1" oninput="showconstants();" onchange="showconstants();">
+      Elimination rate constant (kel) = <span id="kelReadout">1</span> s-1
+    </div>
+    <div style="width:500px; font-size = 10px; margin-left:auto; margin-right:auto; position:relative";>
+      <input type="range" id="kaSlider" min="0.01" max="10" step="0.01" value="1" oninput="showconstants();" onchange="showconstants();">
+      Absorption rate constant (ka) = <span id="kaReadout">1</span> s-1
+    </div>
+    <div style="width:500px; font-size = 10px; margin-left:auto; margin-right:auto; position:relative";>
+      <input type="range" id="kd1Slider" min="0.01" max="10" step="0.01" value="1" oninput="showconstants();" onchange="showconstants();">
+      Distribution rate constant (kd1) = <span id="kd1Readout">1</span> s-1
+    </div>
+    <div style="width:500px; font-size = 10px; margin-left:auto; margin-right:auto; position:relative";>
+      <input type="range" id="kd2Slider" min="0.01" max="10" step="0.01" value="1" oninput="showconstants();" onchange="showconstants();">
+      Distribution reverse rate constant (kd2) = <span id="kd2Readout">1</span> s-1
+    </div>
+    <div style="width:500px; font-size = 10px; margin-left:auto; margin-right:auto; position:relative";>
+      <input type="range" id="VcSlider" min="1" max="8" step="0.5" value="5" oninput="showconstants();" onchange="showconstants();">
+      Volume of the central compartment (Vc) = <span id="VcReadout">5</span> l
+    </div>
+    <div style="width:500px; font-size = 10px; margin-left:auto; margin-right:auto; position:relative";>
+      <input type="range" id="VtSlider" min="0.1" max="100" step="0.1" value="5" oninput="showconstants();" onchange="showconstants();">
+      Volume of the tissue compartment (Vt) = <span id="VtReadout">5</span> l
+    </div>
+    <div style="text-align:center";>
+      <input type="button" value="Plot!" onclick="maketheplot();">
+    </div>
+    <p style="font-size:18px";> This is a simulation of a two comparment pharmacokinetic model.</p>
+    <div id="tester" style="width:600px;height:250px;"></div>
+    <script>
+      var kel, ka, kd1, kd2, Vc, Vt;
+
+      function odefuncGI(GI,Central, Tissue) {
+        return -ka*GI;}
+
+      function odefuncCentral(GI,Central, Tissue) {
+        return ka * GI/Vc + kd2 * Tissue/Vt - kel * Central/Vc - kd1 * Central/Vc;}
+
+      function odefuncTissue(GI,Central, Tissue) {
+        return kd1 *Central/Vc -kd2 * Tissue/Vt;}
+
+
+// This implements the runge kutta algorithm for three variables (GI, Central and Tissue)
+//Each step calls the rate function defined above
+      function RK4Step(GI, Central, Tissue, h) {
+        var kGI0 = odefuncGI(GI, Central, Tissue);
+        var kCentral0 = odefuncCentral(GI, Central, Tissue);
+        var kTissue0 = odefuncTissue(GI, Central, Tissue);
+
+        var kGI1 = odefuncGI(GI+0.5*h*kGI0,Central+0.5*h*kCentral0, Tissue+0.5*h*kTissue0);
+        var kCentral1 = odefuncCentral(GI+0.5*h*kGI0,Central+0.5*h*kCentral0, Tissue+0.5*h*kTissue0);
+        var kTissue1 = odefuncTissue(GI+0.5*h*kGI0,Central+0.5*h*kCentral0, Tissue+0.5*h*kTissue0);
+
+
+        var kGI2 = odefuncGI(GI+0.5*h*kGI1,Central+0.5*h*kCentral1, Tissue+0.5*h*kTissue1);
+        var kCentral2 = odefuncCentral(GI+0.5*h*kGI1,Central+0.5*h*kCentral1, Tissue+0.5*h*kTissue1);
+        var kTissue2 = odefuncTissue(GI+0.5*h*kGI1,Central+0.5*h*kCentral1, Tissue+0.5*h*kTissue1);
+
+        var kGI3 = odefuncGI(GI+0.5*h*kGI2,Central+0.5*h*kCentral2, Tissue+0.5*h*kTissue2);
+        var kCentral3 = odefuncCentral(GI+0.5*h*kGI2,Central+0.5*h*kCentral2, Tissue+0.5*h*kTissue2);
+        var kTissue3 = odefuncTissue(GI+0.5*h*kGI2,Central+0.5*h*kCentral2, Tissue+0.5*h*kTissue2);
+
+        return [ GI+h/6*(kGI0+2*(kGI1+kGI2)+kGI3),
+           Central+h/6*(kCentral0+2*(kCentral1+kCentral2)+kCentral3),
+           Tissue+h/6*(kTissue0+2*(kTissue1+kTissue2)+kTissue3)];
+         }
+
+// 4TH ORDER RUNGE-KUTTA
+function RK4 (GI, Central, Tissue, h, n) {
+  // Initialize an array to hold the values
+  var values = new Array(n);
+
+  // Initial conditions
+  values[0] = [GI, Central, Tissue];
+  for (i = 1; i < n; ++i) {
+      values[i] = RK4Step(values[i-1][0], values[i-1][1], values[i-1][2], h);
+  }
+  return values;
+}
+
+// *** Setting up the data *** //
+var step = 0.1
+var time = 25
+var iterations = time/step
+
+//This function allows to slice the array (the output is triplets of numbers, this allows to extract the columns by index n)
+function arrayColumn(arr, n) {
+  return arr.map(x=> x[n]);
+}
+
+// console.log(arrayColumn(rkValues, 1));
+
+//This function underscore (in the underscore.js library) allows the creation of an array: _.range(start, stop, step)
+times = _.range(0, time, step)
+
+function maketheplot() {
+  kel = Number(kelSlider.value);
+  ka = Number(kaSlider.value);
+  kd1 = Number(kd1Slider.value);
+  kd2 = Number(kd2Slider.value);
+  Vc = Number(VcSlider.value);
+  Vt = Number(VtSlider.value);
+  var rkValues = RK4(100, 0, 0, step, iterations);
+  var layout={
+    xaxis: {title: 'time (s)'},
+    yaxis: {title: 'Cp (mg/l)'}
+  }
+  Plotly.newPlot('tester', [{x:times, y:arrayColumn(rkValues, 1)}], layout);
+}
+function showconstants() {
+        kelReadout.innerHTML = kelSlider.value;
+        kaReadout.innerHTML = kaSlider.value;
+        kd1Readout.innerHTML = kd1Slider.value
+        kd2Readout.innerHTML = kd2Slider.value
+        VcReadout.innerHTML = VcSlider.value
+        VtReadout.innerHTML = VtSlider.value
+      }
+
+
+    </script>
+  </body>
+</html>
